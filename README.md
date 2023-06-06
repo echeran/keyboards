@@ -37,8 +37,8 @@ Mobile app download:
 
 #### How to install a keyboard for Keyman
 
-* iOS (iPhone / iPad): [Installing Custom Keyboards/Dictionaries](https://help.keyman.com/products/iphone-and-ipad/current-version/basic/installing-custom-keyboards-dictionaries)
-* Android: [How To - Download and Install a Keyman Keyboard](https://help.keyman.com/products/android/current-version/start/installing-keyboards)
+* iOS (iPhone / iPad): <a target="ios" href="https://help.keyman.com/products/iphone-and-ipad/current-version/basic/installing-custom-keyboards-dictionaries">Installing Custom Keyboards/Dictionaries</a>
+* Android: <a target="android" href="https://help.keyman.com/products/android/current-version/basic/installing-custom-packages">Installing Custom Keyboards/Dictionaries</a>
 
 #### Guide to keyboards in the repository
 
