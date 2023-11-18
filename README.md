@@ -51,7 +51,7 @@ Languages currently implemented:
 
 BCP 47 identifier | Language | Link to keyboards |
 |-----------------|----------|-------------------|
-| ta              | Tamil    | [Tamil keyboards](https://github.com/echeran/keyboards/blob/main/ta/) |
+| ta              | Tamil    | [Tamil keyboards](https://github.com/echeran/keyboards/blob/main/ta/layout-e) |
 
 
 ### Web-based desktop version
