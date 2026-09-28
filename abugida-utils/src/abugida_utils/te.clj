@@ -221,6 +221,23 @@
         combined-phoneme-str (apply str (f/str->elems inverse-concat-phoneme-trie concat-phoneme-str))]
     combined-phoneme-str))
 
+(def ^:private letter-to-phonemes-map
+  (let [entries-flat-coll (apply concat grid-of-letter-mapping-entries)]
+    (into {} entries-flat-coll)))
+
+(def phonemes-to-letter-map (set/map-invert letter-to-phonemes-map))
+
+(defn phonemes->letters
+  "given a seq of phonemes, return the seq of letters after the phonemes are combined into a normalized version of the letters"
+  [phoneme-seq]
+  (let [concat-phoneme-str (apply str phoneme-seq)
+        inverse-concat-phoneme-map (into {} (for [[k v] phonemes-to-letter-map]
+                                              [(apply str k) v]))
+        inverse-concat-phoneme-trie (f/make-trie inverse-concat-phoneme-map)
+        letters-seq (f/str->elems inverse-concat-phoneme-trie concat-phoneme-str)]
+    letters-seq))
+
+
 (defn print-letters
   [letters]
   (run! println (for [row letters]
