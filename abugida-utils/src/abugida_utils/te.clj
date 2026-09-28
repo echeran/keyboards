@@ -101,7 +101,9 @@
         v2-idx (vowel->index v2)]
     (compare v1-idx v2-idx)))
 
-(def ^:private vowel->unicode-vowel-sign
+(def ^:private
+  ^{:doc "a mapping of vowels (includes nil) to their corresponding Unicode combining mark character (or nil if not applicable)"}
+  vowel->unicode-vowel-sign
   (into (sorted-map-by vowel-mapping-ordering-comparator)
         (zipmap (cons nil vowels)
                 (cons unicode-virama-sign (cons nil unicode-vowel-signs)))))
@@ -166,6 +168,45 @@
    ["య్" "భ్"] [unicode-anusvara-sign "భ్"]
 
    })
+
+(defn- get-anusvara-mappings-for-str-to-phonemes
+  []
+  (let [anusvara-mappings-for-consonants-for-str-to-phonemes (for [entry anusvara-mappings]
+                                                               (let [[phonemes str-chars] entry]
+                                                                 [(apply str str-chars) phonemes]))
+        anusvara-mappings-for-all-letters-for-str-to-phonemes (for [entry anusvara-mappings-for-consonants-for-str-to-phonemes
+                                                                    vowel-entry vowel->unicode-vowel-sign]
+                                                                (let [[s phonemes] entry
+                                                                      [vowel-str combining-mark-char] vowel-entry
+                                                                      new-string (->> (-> s
+                                                                                          (butlast) ;; truncate the virama combining mark at the end of each consonant
+                                                                                          (concat [combining-mark-char]))
+                                                                                      (apply str))
+                                                                      new-phonemes (->> (conj phonemes vowel-str)
+                                                                                        (keep identity)
+                                                                                        (into []))]
+                                                                  [new-string new-phonemes]))]
+    anusvara-mappings-for-all-letters-for-str-to-phonemes))
+
+(defn- get-str-to-phonemes-map
+  []
+  (let [grid-of-letter-mapping-entries-without-anusvara (for [row grid-of-letter-mapping-entries]
+                                                          (let [row-without-anusvara (concat (take 16 row)
+                                                                                (drop 17 row))]
+                                                            row-without-anusvara))
+        final-mapping (-> (into {} (apply concat grid-of-letter-mapping-entries-without-anusvara))
+                          (into (get-anusvara-mappings-for-str-to-phonemes)))]
+    final-mapping))
+
+(def  ^{:doc "a trie of the individual letters in Telugu, whose terminus-attached values are sequences of each letter's phonemes -- this trie can be used in str->elems for directly splitting a word into its phonemes"}
+  phoneme-trie (f/make-trie (get-str-to-phonemes-map)))
+
+(defn str->phonemes
+  "take a string and split it into its constitutent Telugu phonemes"
+  [s]
+  (let [phonemes (f/str->elems phoneme-trie s)
+        phonemes-without-joiner-chars (remove #{"\u200C" "\u200D"} phonemes)]
+    phonemes-without-joiner-chars))
 
 (defn print-letters
   [letters]
