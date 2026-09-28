@@ -237,6 +237,12 @@
         letters-seq (f/str->elems inverse-concat-phoneme-trie concat-phoneme-str)]
     letters-seq))
 
+(defn str->letters
+  "Convert a string into a seq of normalized letters"
+  [s]
+  (-> s
+      str->phonemes
+      phonemes->letters))
 
 (defn print-letters
   [letters]
