@@ -1,5 +1,6 @@
 (ns abugida-utils.te
-  (:require [clj-thamil.format :as f]))
+  (:require [clj-thamil.format :as f]
+            [clojure.set :as set]))
 
 (def vowels ["అ"
              "ఆ"
@@ -169,8 +170,7 @@
 
    })
 
-(defn- get-anusvara-mappings-for-str-to-phonemes
-  []
+(def ^:private get-anusvara-mappings-for-str-to-phonemes
   (let [anusvara-mappings-for-consonants-for-str-to-phonemes (for [entry anusvara-mappings]
                                                                (let [[phonemes str-chars] entry]
                                                                  [(apply str str-chars) phonemes]))
@@ -188,18 +188,17 @@
                                                                   [new-string new-phonemes]))]
     anusvara-mappings-for-all-letters-for-str-to-phonemes))
 
-(defn- get-str-to-phonemes-map
-  []
+(def ^:private str-to-phonemes-map
   (let [grid-of-letter-mapping-entries-without-anusvara (for [row grid-of-letter-mapping-entries]
                                                           (let [row-without-anusvara (concat (take 16 row)
                                                                                 (drop 17 row))]
                                                             row-without-anusvara))
         final-mapping (-> (into {} (apply concat grid-of-letter-mapping-entries-without-anusvara))
-                          (into (get-anusvara-mappings-for-str-to-phonemes)))]
+                          (into get-anusvara-mappings-for-str-to-phonemes))]
     final-mapping))
 
 (def  ^{:doc "a trie of the individual letters in Telugu, whose terminus-attached values are sequences of each letter's phonemes -- this trie can be used in str->elems for directly splitting a word into its phonemes"}
-  phoneme-trie (f/make-trie (get-str-to-phonemes-map)))
+  phoneme-trie (f/make-trie str-to-phonemes-map))
 
 (defn str->phonemes
   "take a string and split it into its constitutent Telugu phonemes"
@@ -207,6 +206,20 @@
   (let [phonemes (f/str->elems phoneme-trie s)
         phonemes-without-joiner-chars (remove #{"\u200C" "\u200D"} phonemes)]
     phonemes-without-joiner-chars))
+
+(def inverse-phoneme-map (set/map-invert str-to-phonemes-map))
+
+;; TODO: refactor clj-thamil.format/phonemes->str to parameterize by inverse-phoneme-map
+
+(defn phonemes->str
+  "given a seq of phonemes, create a string where the phonemes are combined into their proper letters"
+  [phoneme-seq]
+  (let [concat-phoneme-str (apply str phoneme-seq)
+        inverse-concat-phoneme-map (into {} (for [[k v] inverse-phoneme-map]
+                                              [(apply str k) v]))
+        inverse-concat-phoneme-trie (f/make-trie inverse-concat-phoneme-map)
+        combined-phoneme-str (apply str (f/str->elems inverse-concat-phoneme-trie concat-phoneme-str))]
+    combined-phoneme-str))
 
 (defn print-letters
   [letters]
