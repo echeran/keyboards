@@ -1,6 +1,7 @@
 (ns abugida-utils.te
   (:require [clj-thamil.format :as f]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [clojure.string :as string]))
 
 (def vowels ["అ"
              "ఆ"
@@ -170,7 +171,11 @@
 
    })
 
-(def ^:private get-anusvara-mappings-for-str-to-phonemes
+(def ^:private
+  ^{:doc "a map of the substr (starting with the anusvara combining mark character followed by a consonant and vowel sign)
+  to the 'normalized' seq of phoneme strs that are implicitly represented by the substr.
+  this map is used to form a set of entries in str-to-phonemes-map"}
+  get-anusvara-mappings-for-str-to-phonemes
   (let [anusvara-mappings-for-consonants-for-str-to-phonemes (for [entry anusvara-mappings]
                                                                (let [[phonemes str-chars] entry]
                                                                  [(apply str str-chars) phonemes]))
@@ -197,7 +202,8 @@
                           (into get-anusvara-mappings-for-str-to-phonemes))]
     final-mapping))
 
-(def  ^{:doc "a trie of the individual letters in Telugu, whose terminus-attached values are sequences of each letter's phonemes -- this trie can be used in str->elems for directly splitting a word into its phonemes"}
+(def ^:private
+  ^{:doc "a trie of the individual letters in Telugu, whose terminus-attached values are sequences of each letter's phonemes -- this trie can be used in str->elems for directly splitting a word into its phonemes"}
   phoneme-trie (f/make-trie str-to-phonemes-map))
 
 (defn str->phonemes
@@ -225,7 +231,7 @@
   (let [entries-flat-coll (apply concat grid-of-letter-mapping-entries)]
     (into {} entries-flat-coll)))
 
-(def phonemes-to-letter-map (set/map-invert letter-to-phonemes-map))
+(def ^:private phonemes-to-letter-map (set/map-invert letter-to-phonemes-map))
 
 (defn phonemes->letters
   "given a seq of phonemes, return the seq of letters after the phonemes are combined into a normalized version of the letters"
@@ -237,6 +243,8 @@
         letters-seq (f/str->elems inverse-concat-phoneme-trie concat-phoneme-str)]
     letters-seq))
 
+;; TODO: create functions upstream in clj-thamil that accepts a sequence
+
 (defn str->letters
   "Convert a string into a seq of normalized letters"
   [s]
@@ -244,7 +252,46 @@
       str->phonemes
       phonemes->letters))
 
-(defn print-letters
+(defn- phonemes->letter-frequency-grid
+  "For a given string, return the frequencies of the normalized letters of the string's text"
+  [phonemes]
+  (let [letter-seq (phonemes->letters phonemes)
+        letter-frequency-map (frequencies letter-seq)]
+    (string/join \newline (for [row letters]
+                            (->> (map #(get letter-frequency-map % 0) row)
+                                 (map (partial format "%4d"))
+                                 (string/join \tab))))))
+
+(defn- phonemes->phoneme-freq-report
+  [phonemes]
+  (let [phoneme-freqs-map (frequencies phonemes)
+        vowel-freqs (map #(get phoneme-freqs-map % 0) vowels)
+        consonant-freqs (map #(get phoneme-freqs-map % 0) consonants)]
+    (string/join \newline ["Vowel frequencies:"
+                           (string/join \tab vowels)
+                           (string/join \tab vowel-freqs)
+                           ""
+                           (str "Vowel sum: " (reduce + vowel-freqs))
+                           \newline
+                           "Consonant frequencies:"
+                           (string/join \tab consonants)
+                           (string/join \tab consonant-freqs)
+                           ""
+                           (str "Consonant sum: " (reduce + consonant-freqs))])))
+
+(defn phoneme-letter-report
+  [phonemes]
+  (string/join \newline [(phonemes->letter-frequency-grid phonemes)
+                         \newline
+                         (phonemes->phoneme-freq-report phonemes)]))
+
+(defn print-debug-letters
   [letters]
   (run! println (for [row letters]
                   (into [] row))))
+
+(defn print-letters
+  [letters]
+  (println (string/join \newline (for [row letters]
+                                   (string/join \tab row)))))
+
