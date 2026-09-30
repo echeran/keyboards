@@ -15,8 +15,19 @@
                 (with-open [rdr (jio/reader resc-file)]
                   (let [s (slurp rdr)
                         phonemes (str->phonemes s)
-                        report (phoneme-letter-report phonemes)]
-                    (println report)))))]
-      (let [file1 "wikipedia1.txt"
-            resc1 (jio/resource file1)]
-        (write-freq-report resc1)))))
+                        report (phoneme-letter-report phonemes)
+                        parent-dir (-> resc-file
+                                       .getParentFile)
+                        output-dir (jio/file parent-dir "output")
+                        in-file-basename (.getName resc-file)
+                        output-file (jio/file output-dir in-file-basename)]
+                    (.mkdirs output-dir)
+                    ;;(println "output-file" output-file)
+                    (.createNewFile output-file)
+                    (spit output-file report)))))]
+      (let [resc-file-names ["wikipedia1.txt"
+                             "wikipedia2.txt"
+                             "wikipedia3.txt"]
+            resc-objs (map jio/resource resc-file-names)]
+        (doseq [resc resc-objs]
+          (write-freq-report resc))))))
