@@ -88,7 +88,7 @@
                                           ;; = halant (the preferred name)
   )
 
-(def ^:private unicode-anusvara-sign \u0C02 ;; ◌ం TELUGU SIGN ANUSVARA
+(def unicode-anusvara-sign \u0C02 ;; ◌ం TELUGU SIGN ANUSVARA
   )
 
 (defn- vowel->index
@@ -134,7 +134,7 @@
   (for [c unicode-consonant-base-characters]
     (str c unicode-virama-sign)))
 
-(def consonant-conjuncts
+(def ^:private consonant-conjuncts
   (for [c1 unicode-consonant-base-characters]
     (into []
           (for [c2 unicode-consonant-base-characters]
@@ -143,7 +143,7 @@
                  c2
                  unicode-virama-sign)))))
 
-(def ^:private anusvara-mappings
+(def anusvara-mappings
   {["ఙ్" "క్"] [unicode-anusvara-sign "క్"]
    ["ఙ్" "ఖ్"] [unicode-anusvara-sign "ఖ్"]
    ["ఙ్" "గ్"] [unicode-anusvara-sign "గ్"]
@@ -252,7 +252,7 @@
       str->phonemes
       phonemes->letters))
 
-(defn- phonemes->letter-frequency-grid
+(defn- letter-frequency-grid
   "For a given string, return the frequencies of the normalized letters of the string's text"
   [phonemes]
   (let [letter-seq (phonemes->letters phonemes)
@@ -262,7 +262,7 @@
                                  (map (partial format "%4d"))
                                  (string/join \tab))))))
 
-(defn- phonemes->phoneme-freq-report
+(defn- phoneme-freq-report
   [phonemes]
   (let [phoneme-freqs-map (frequencies phonemes)
         vowel-freqs (map #(get phoneme-freqs-map % 0) vowels)
@@ -281,9 +281,9 @@
 
 (defn phoneme-letter-report
   [phonemes]
-  (string/join \newline [(phonemes->letter-frequency-grid phonemes)
+  (string/join \newline [(letter-frequency-grid phonemes)
                          \newline
-                         (phonemes->phoneme-freq-report phonemes)]))
+                         (phoneme-freq-report phonemes)]))
 
 (defn print-debug-letters
   [letters]
