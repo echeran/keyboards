@@ -1,7 +1,4 @@
 (ns abugida-utils.core)
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
 
+;; TODO: create a main method that dispatches to language-specific commands
