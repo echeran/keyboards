@@ -1,5 +1,6 @@
 (ns abugida-utils.te-keyman-rules
-  (:require [abugida-utils.te :as te]))
+  (:require [abugida-utils.te :as te]
+            [clojure.java.io :as jio]))
 
 (def ^:priate phoneme-keyman-keyid-map
   {
@@ -61,8 +62,7 @@
    "హ్" "[T_H]"
    })
 
-(defn cons-vowel-rules
-  []
+(def cons-vowel-rules
   (for [c te/consonants
         v te/vowels]
     (let [v-key-id (get phoneme-keyman-keyid-map v)
@@ -80,8 +80,7 @@
          "ఎ" "ఏ"
          "ఒ" "ఓ"}))
 
-(defn short-vowel-doubled-rules
-  []
+(def short-vowel-doubled-rules
   (for [[short-v long-v] short-long-vowel-map]
     (let [v-key-id (get phoneme-keyman-keyid-map short-v)]
       (format "%s + %s > %s"
@@ -89,8 +88,7 @@
               v-key-id
               (pr-str long-v)))))
 
-(defn cons-short-vowel-short-vowel-rules
-  []
+(def cons-short-vowel-short-vowel-rules
   (for [c te/consonants
         short-v (keys short-long-vowel-map)]
     (let [c-short-v-str (te/phonemes->str [c short-v])
@@ -102,8 +100,7 @@
               v-key-id
               (pr-str c-long-v-str)))))
 
-(defn grapheme-cluster-bksp-rules
-  []
+(def grapheme-cluster-bksp-rules
   (for [c te/consonants
         v te/vowels]
     (let [cv-str (te/phonemes->str [c v])]
@@ -111,23 +108,46 @@
               (pr-str cv-str)
               (pr-str c)))))
 
-(defn anusvara-substitution-rules
-  []
-  (sort
-    (for [[c-c-phonemes _] te/anusvara-mappings]
-      (let [[c-nasal c-plosive] c-c-phonemes
-            c-plosive-key-id (get phoneme-keyman-keyid-map c-plosive)]
-        (format "%s + %s > %s"
-                (pr-str c-nasal)
-                c-plosive-key-id
-                (pr-str (str te/unicode-anusvara-sign c-plosive)))))))
+(def anusvara-substitution-rules
+  (for [[c-c-phonemes _] (sort te/anusvara-mappings)]
+    (let [[c-nasal c-plosive] c-c-phonemes
+          c-plosive-key-id (get phoneme-keyman-keyid-map c-plosive)]
+      (format "%s + %s > %s"
+              (pr-str c-nasal)
+              c-plosive-key-id
+              (pr-str (str te/unicode-anusvara-sign c-plosive))))))
 
-(defn anusvara-backspace-rules
+(def anusvara-backspace-rules
+  (for [[c-c-phonemes _] (sort te/anusvara-mappings)]
+    (let [[c-nasal c-plosive] c-c-phonemes]
+      (format "%s + [K_BKSP] > %s"
+              (pr-str (str te/unicode-anusvara-sign c-plosive))
+              (pr-str c-nasal)))))
+
+(defn print-rules
   []
-  (sort
-    (for [[c-c-phonemes _] te/anusvara-mappings]
-      (let [[c-nasal c-plosive] c-c-phonemes
-            c-plosive-key-id (get phoneme-keyman-keyid-map c-plosive)]
-        (format "%s + [K_BKSP] > %s"
-                (pr-str (str te/unicode-anusvara-sign c-plosive))
-                (pr-str c-nasal))))))
+  (let [keyman-kbd-layout-lines (concat ["c pure consonant followed by short/long vowels"]
+                                        cons-vowel-rules
+                                        ["\n"]
+                                        ["c short vowel x 2"]
+                                        short-vowel-doubled-rules
+                                        ["\n"]
+                                        ["c C+short vowel + short vowel > C+long vowel"]
+                                        cons-short-vowel-short-vowel-rules
+                                        ["\n"]
+                                        ["c multi-code point grapheme cluster + backspace"]
+                                        grapheme-cluster-bksp-rules
+                                        ["\n"]
+                                        ["c anusvara substitutions"]
+                                        anusvara-substitution-rules
+                                        ["\n"]
+                                        ["c grapheme cluster (incl anusvara) + backspace"]
+                                        anusvara-backspace-rules)
+        outdir (doto (jio/file "output" "te" "rules")
+                 (.mkdirs))
+        outfile (jio/file outdir "keyman_rules.txt")]
+    (with-open [writer (jio/writer outfile)]
+      (doseq [line keyman-kbd-layout-lines]
+        (. writer write line)
+        (. writer write "\n"))
+      (.flush writer))))
