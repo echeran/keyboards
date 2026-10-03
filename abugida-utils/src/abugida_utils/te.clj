@@ -103,7 +103,7 @@
         v2-idx (vowel->index v2)]
     (compare v1-idx v2-idx)))
 
-(def ^:private
+(def
   ^{:doc "a mapping of vowels (includes nil) to their corresponding Unicode combining mark character (or nil if not applicable)"}
   vowel->unicode-vowel-sign
   (into (sorted-map-by vowel-mapping-ordering-comparator)
@@ -133,6 +133,10 @@
 (def consonants
   (for [c unicode-consonant-base-characters]
     (str c unicode-virama-sign)))
+
+(def phonemes
+  (set (concat vowels
+               consonants)))
 
 (def ^:private consonant-conjuncts
   (for [c1 unicode-consonant-base-characters]

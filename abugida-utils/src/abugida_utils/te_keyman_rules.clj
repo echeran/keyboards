@@ -1,6 +1,7 @@
 (ns abugida-utils.te-keyman-rules
   (:require [abugida-utils.te :as te]
-            [clojure.java.io :as jio]))
+            [clojure.java.io :as jio]
+            [clojure.string :as string]))
 
 (def ^:priate phoneme-keyman-keyid-map
   {
@@ -18,7 +19,7 @@
    "ఐ" "[T_AI]"
    "ఒ" "[T_O]"
    "ఓ" "[T_OO]"
-   "ఔ" "[T_AI]"
+   "ఔ" "[T_AU]"
    "అఁ" "[T_CHAND]"
    "అం" "[T_ANU]"
    "అః" "[T_VISAR]"
@@ -101,12 +102,16 @@
               (pr-str c-long-v-str)))))
 
 (def grapheme-cluster-bksp-rules
-  (for [c te/consonants
-        v te/vowels]
-    (let [cv-str (te/phonemes->str [c v])]
-      (format "%s + [K_BKSP] > %s"
-              (pr-str cv-str)
-              (pr-str c)))))
+  (concat (for [c te/consonants
+                v te/vowels]
+            (let [cv-str (te/phonemes->str [c v])]
+              (format "%s + [K_BKSP] > %s"
+                      (pr-str cv-str)
+                      (pr-str c))))
+          (for [c te/consonants]
+            (let [c-str (te/phonemes->str [c])]
+              (format "%s + [K_BKSP] > nul"
+                      (pr-str c-str))))))
 
 (def anusvara-substitution-rules
   (for [[c-c-phonemes _] (sort te/anusvara-mappings)]
@@ -124,6 +129,26 @@
               (pr-str (str te/unicode-anusvara-sign c-plosive))
               (pr-str c-nasal)))))
 
+(defn int->unicode-u-hex-str
+  [^long i]
+  (let [hex-str (Long/toHexString i)
+        left-0-pad (if (<= 4 (count hex-str))
+                     ""
+                     (apply str (repeat (- 4 (count hex-str)) "0")))
+        unicode-str (str "U+" left-0-pad (string/upper-case hex-str))]
+    unicode-str))
+
+(def defaults-per-key-rules
+  (for [[phoneme phoneme-key-id] phoneme-keyman-keyid-map]
+    (let [phoneme-chars (seq phoneme)
+          phoneme-char-seq-rule-str (->> phoneme-chars
+                                         (map long)
+                                         (map int->unicode-u-hex-str)
+                                         (string/join \space))]
+      (format " + %s > %s"
+              phoneme-key-id
+              phoneme-char-seq-rule-str))))
+
 (defn print-rules
   []
   (let [keyman-kbd-layout-lines (concat ["c pure consonant followed by short/long vowels"]
@@ -135,14 +160,17 @@
                                         ["c C+short vowel + short vowel > C+long vowel"]
                                         cons-short-vowel-short-vowel-rules
                                         ["\n"]
-                                        ["c multi-code point grapheme cluster + backspace"]
+                                        ["c any multi-code point or consonant-based grapheme cluster + backspace"]
                                         grapheme-cluster-bksp-rules
                                         ["\n"]
                                         ["c anusvara substitutions"]
                                         anusvara-substitution-rules
                                         ["\n"]
                                         ["c grapheme cluster (incl anusvara) + backspace"]
-                                        anusvara-backspace-rules)
+                                        anusvara-backspace-rules
+                                        ["\n"]
+                                        ["c defaults per key"]
+                                        defaults-per-key-rules)
         outdir (doto (jio/file "output" "te" "rules")
                  (.mkdirs))
         outfile (jio/file outdir "keyman_rules.txt")]
